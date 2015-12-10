@@ -3,6 +3,7 @@ using SharpEXR.ColorSpace;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -19,13 +20,11 @@ namespace EXRViewer {
             part.Open(args[0]);
 
             var bmp = new Bitmap(part.DataWindow.Width, part.DataWindow.Height);
-            var data = bmp.LockBits(new System.Drawing.Rectangle(0, 0, bmp.Width, bmp.Height), System.Drawing.Imaging.ImageLockMode.WriteOnly, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
-            var destBytes = part.GetBytes(ImageDestFormat.BGR8, GammaEncoding.sRGB, data.Stride);
+            var data = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height), ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);
+            var destBytes = part.GetBytes(ImageDestFormat.BGRA8, GammaEncoding.sRGB, data.Stride);
             Marshal.Copy(destBytes, 0, data.Scan0, destBytes.Length);
             bmp.UnlockBits(data);
 
-            var floats = part.GetFloats(ChannelConfiguration.RGB, false, GammaEncoding.Linear, false);
-            var alpha = part.FloatChannels["A"];
             part.Close();
 
             var frm = new Form();
