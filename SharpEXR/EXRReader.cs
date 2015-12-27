@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace SharpEXR {
-    public interface IEXRReader {
+    public interface IEXRReader : IDisposable {
         byte ReadByte();
         int ReadInt32();
         uint ReadUInt32();

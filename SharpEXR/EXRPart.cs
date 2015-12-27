@@ -9,6 +9,8 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace SharpEXR {
+    public delegate IEXRReader ParallelReaderCreationDelegate();
+
     public class EXRPart {
         public readonly EXRVersion Version;
         public readonly EXRHeader Header;
@@ -214,7 +216,6 @@ namespace SharpEXR {
                 throw new ArgumentException("Stride was lower than minimum", "stride");
             }
             byte[] buffer = new byte[stride * DataWindow.Height];
-            BinaryWriter writer = new BinaryWriter(new MemoryStream(buffer));
 
             var padding = stride - bytesPerPixel * DataWindow.Width;
 
@@ -301,241 +302,276 @@ namespace SharpEXR {
                 }
             }
 
+#if !PARALLEL
             int srcIndex = 0;
             int destIndex = 0;
+
+            BinaryWriter writer = new BinaryWriter(new MemoryStream(buffer));
+
             for (int y = 0; y < DataWindow.Height; y++, destIndex += padding) {
-                for (int x = 0; x < DataWindow.Width; x++, destIndex += bytesPerPixel, srcIndex++) {
-                    float r, g, b, a;
+                GetScanlineBytes(bytesPerPixel, destIndex, srcIndex, isHalf, destinationAlpha, sourceAlpha,
+                    hr, hg, hb, ha, fr, fg, fb, fa,
+                    bitsPerPixel, gamma, premultiplied, bgra, buffer, writer);
+                destIndex += DataWindow.Width * bytesPerPixel;
+                srcIndex += DataWindow.Width;
+            }
 
-                    // get source channels as floats
-                    if (isHalf) {
-                        r = hr[srcIndex];
-                        g = hg[srcIndex];
-                        b = hb[srcIndex];
+            writer.Dispose();
+            writer.BaseStream.Dispose();
+#else
+            var actions = (from y in Enumerable.Range(0, DataWindow.Height) select (Action)(() => {
+                var destIndex = stride * y;
+                var srcIndex = DataWindow.Width * y;
 
-                        if (destinationAlpha) {
-                            a = sourceAlpha ? (float)ha[srcIndex] : 1.0f;
-                        }
-                        else {
-                            a = 1.0f;
-                        }
+                using (var stream = new MemoryStream(buffer)) {
+                    using (var writer = new BinaryWriter(stream)) {
+                        GetScanlineBytes(bytesPerPixel, destIndex, srcIndex, isHalf, destinationAlpha, sourceAlpha,
+                            hr, hg, hb, ha, fr, fg, fb, fa,
+                            bitsPerPixel, gamma, premultiplied, bgra, buffer, writer);
+                    }
+                }
+            })).ToArray();
+            Parallel.Invoke(actions);
+#endif
+
+            return buffer;
+        }
+
+        private void GetScanlineBytes(
+            int bytesPerPixel, int destIndex, int srcIndex, bool isHalf, bool destinationAlpha, bool sourceAlpha,
+            Half[] hr, Half[] hg, Half[] hb, Half[] ha, float[] fr, float[] fg, float[] fb, float[] fa,
+            int bitsPerPixel, GammaEncoding gamma, bool premultiplied, bool bgra, byte[] buffer, BinaryWriter writer
+        ) {
+            writer.Seek(destIndex, SeekOrigin.Begin);
+            for (int x = 0; x < DataWindow.Width; x++, destIndex += bytesPerPixel, srcIndex++) {
+                float r, g, b, a;
+
+                // get source channels as floats
+                if (isHalf) {
+                    r = hr[srcIndex];
+                    g = hg[srcIndex];
+                    b = hb[srcIndex];
+
+                    if (destinationAlpha) {
+                        a = sourceAlpha ? (float)ha[srcIndex] : 1.0f;
                     }
                     else {
-                        r = fr[srcIndex];
-                        g = fg[srcIndex];
-                        b = fb[srcIndex];
+                        a = 1.0f;
+                    }
+                }
+                else {
+                    r = fr[srcIndex];
+                    g = fg[srcIndex];
+                    b = fb[srcIndex];
 
-                        if (destinationAlpha) {
-                            a = sourceAlpha ? fa[srcIndex] : 1.0f;
+                    if (destinationAlpha) {
+                        a = sourceAlpha ? fa[srcIndex] : 1.0f;
+                    }
+                    else {
+                        a = 1.0f;
+                    }
+                }
+
+                // convert to destination format
+                if (bitsPerPixel == 8) {
+                    byte r8, g8, b8, a8 = 255;
+
+                    if (gamma == GammaEncoding.Linear) {
+                        if (premultiplied) {
+                            r8 = (byte)Math.Min(255, Math.Max(0, Math.Round(r * a * 255)));
+                            g8 = (byte)Math.Min(255, Math.Max(0, Math.Round(g * a * 255)));
+                            b8 = (byte)Math.Min(255, Math.Max(0, Math.Round(b * a * 255)));
+                            a8 = (byte)Math.Min(255, Math.Max(0, Math.Round(a * 255)));
                         }
                         else {
-                            a = 1.0f;
+                            r8 = (byte)Math.Min(255, Math.Max(0, Math.Round(r * 255)));
+                            g8 = (byte)Math.Min(255, Math.Max(0, Math.Round(g * 255)));
+                            b8 = (byte)Math.Min(255, Math.Max(0, Math.Round(b * 255)));
+                            if (destinationAlpha) {
+                                a8 = (byte)Math.Min(255, Math.Max(0, Math.Round(a * 255)));
+                            }
+                        }
+                    }
+                    else if (gamma == GammaEncoding.Gamma) {
+                        if (premultiplied) {
+                            r8 = (byte)Math.Min(255, Math.Max(0, Math.Round(Gamma.Compress(r) * a * 255)));
+                            g8 = (byte)Math.Min(255, Math.Max(0, Math.Round(Gamma.Compress(g) * a * 255)));
+                            b8 = (byte)Math.Min(255, Math.Max(0, Math.Round(Gamma.Compress(b) * a * 255)));
+                            a8 = (byte)Math.Min(255, Math.Max(0, Math.Round(a * 255)));
+                        }
+                        else {
+                            r8 = (byte)Math.Min(255, Math.Max(0, Math.Round(Gamma.Compress(r) * 255)));
+                            g8 = (byte)Math.Min(255, Math.Max(0, Math.Round(Gamma.Compress(g) * 255)));
+                            b8 = (byte)Math.Min(255, Math.Max(0, Math.Round(Gamma.Compress(b) * 255)));
+                            if (destinationAlpha) {
+                                a8 = (byte)Math.Min(255, Math.Max(0, Math.Round(a * 255)));
+                            }
+                        }
+                    }
+                    else { // sRGB
+                        if (premultiplied) {
+                            r8 = (byte)Math.Min(255, Math.Max(0, Math.Round(Gamma.Compress_sRGB(r) * a * 255)));
+                            g8 = (byte)Math.Min(255, Math.Max(0, Math.Round(Gamma.Compress_sRGB(g) * a * 255)));
+                            b8 = (byte)Math.Min(255, Math.Max(0, Math.Round(Gamma.Compress_sRGB(b) * a * 255)));
+                            a8 = (byte)Math.Min(255, Math.Max(0, Math.Round(a * 255)));
+                        }
+                        else {
+                            r8 = (byte)Math.Min(255, Math.Max(0, Math.Round(Gamma.Compress_sRGB(r) * 255)));
+                            g8 = (byte)Math.Min(255, Math.Max(0, Math.Round(Gamma.Compress_sRGB(g) * 255)));
+                            b8 = (byte)Math.Min(255, Math.Max(0, Math.Round(Gamma.Compress_sRGB(b) * 255)));
+                            if (destinationAlpha) {
+                                a8 = (byte)Math.Min(255, Math.Max(0, Math.Round(a * 255)));
+                            }
                         }
                     }
 
-                    // convert to destination format
-                    if (bitsPerPixel == 8) {
-                        byte r8, g8, b8, a8 = 255;
+                    if (bgra) {
+                        buffer[destIndex] = b8;
+                        buffer[destIndex + 1] = g8;
+                        buffer[destIndex + 2] = r8;
+                    }
+                    else {
+                        buffer[destIndex] = r8;
+                        buffer[destIndex + 1] = g8;
+                        buffer[destIndex + 2] = b8;
+                    }
+                    if (destinationAlpha) {
+                        buffer[destIndex + 3] = a8;
+                    }
+                }
+                else if (bitsPerPixel == 32) {
+                    float r32, g32, b32, a32 = 1.0f;
 
-                        if (gamma == GammaEncoding.Linear) {
-                            if (premultiplied) {
-                                r8 = (byte)Math.Min(255, Math.Max(0, Math.Round(r * a * 255)));
-                                g8 = (byte)Math.Min(255, Math.Max(0, Math.Round(g * a * 255)));
-                                b8 = (byte)Math.Min(255, Math.Max(0, Math.Round(b * a * 255)));
-                                a8 = (byte)Math.Min(255, Math.Max(0, Math.Round(a * 255)));
-                            }
-                            else {
-                                r8 = (byte)Math.Min(255, Math.Max(0, Math.Round(r * 255)));
-                                g8 = (byte)Math.Min(255, Math.Max(0, Math.Round(g * 255)));
-                                b8 = (byte)Math.Min(255, Math.Max(0, Math.Round(b * 255)));
-                                if (destinationAlpha) {
-                                    a8 = (byte)Math.Min(255, Math.Max(0, Math.Round(a * 255)));
-                                }
-                            }
-                        }
-                        else if (gamma == GammaEncoding.Gamma) {
-                            if (premultiplied) {
-                                r8 = (byte)Math.Min(255, Math.Max(0, Math.Round(Gamma.Compress(r) * a * 255)));
-                                g8 = (byte)Math.Min(255, Math.Max(0, Math.Round(Gamma.Compress(g) * a * 255)));
-                                b8 = (byte)Math.Min(255, Math.Max(0, Math.Round(Gamma.Compress(b) * a * 255)));
-                                a8 = (byte)Math.Min(255, Math.Max(0, Math.Round(a * 255)));
-                            }
-                            else {
-                                r8 = (byte)Math.Min(255, Math.Max(0, Math.Round(Gamma.Compress(r) * 255)));
-                                g8 = (byte)Math.Min(255, Math.Max(0, Math.Round(Gamma.Compress(g) * 255)));
-                                b8 = (byte)Math.Min(255, Math.Max(0, Math.Round(Gamma.Compress(b) * 255)));
-                                if (destinationAlpha) {
-                                    a8 = (byte)Math.Min(255, Math.Max(0, Math.Round(a * 255)));
-                                }
-                            }
-                        }
-                        else { // sRGB
-                            if (premultiplied) {
-                                r8 = (byte)Math.Min(255, Math.Max(0, Math.Round(Gamma.Compress_sRGB(r) * a * 255)));
-                                g8 = (byte)Math.Min(255, Math.Max(0, Math.Round(Gamma.Compress_sRGB(g) * a * 255)));
-                                b8 = (byte)Math.Min(255, Math.Max(0, Math.Round(Gamma.Compress_sRGB(b) * a * 255)));
-                                a8 = (byte)Math.Min(255, Math.Max(0, Math.Round(a * 255)));
-                            }
-                            else {
-                                r8 = (byte)Math.Min(255, Math.Max(0, Math.Round(Gamma.Compress_sRGB(r) * 255)));
-                                g8 = (byte)Math.Min(255, Math.Max(0, Math.Round(Gamma.Compress_sRGB(g) * 255)));
-                                b8 = (byte)Math.Min(255, Math.Max(0, Math.Round(Gamma.Compress_sRGB(b) * 255)));
-                                if (destinationAlpha) {
-                                    a8 = (byte)Math.Min(255, Math.Max(0, Math.Round(a * 255)));
-                                }
-                            }
-                        }
-
-                        if (bgra) {
-                            buffer[destIndex] = b8;
-                            buffer[destIndex + 1] = g8;
-                            buffer[destIndex + 2] = r8;
+                    if (gamma == GammaEncoding.Linear) {
+                        if (premultiplied) {
+                            r32 = r * a;
+                            g32 = g * a;
+                            b32 = b * a;
+                            a32 = a;
                         }
                         else {
-                            buffer[destIndex] = r8;
-                            buffer[destIndex + 1] = g8;
-                            buffer[destIndex + 2] = b8;
-                        }
-                        if (destinationAlpha) {
-                            buffer[destIndex + 3] = a8;
+                            r32 = r;
+                            g32 = g;
+                            b32 = b;
+                            if (destinationAlpha) {
+                                a32 = a;
+                            }
                         }
                     }
-                    else if (bitsPerPixel == 32) {
-                        float r32, g32, b32, a32 = 1.0f;
-
-                        if (gamma == GammaEncoding.Linear) {
-                            if (premultiplied) {
-                                r32 = r * a;
-                                g32 = g * a;
-                                b32 = b * a;
-                                a32 = a;
-                            }
-                            else {
-                                r32 = r;
-                                g32 = g;
-                                b32 = b;
-                                if (destinationAlpha) {
-                                    a32 = a;
-                                }
-                            }
-                        }
-                        else if (gamma == GammaEncoding.Gamma) {
-                            if (premultiplied) {
-                                r32 = Gamma.Compress(r) * a;
-                                g32 = Gamma.Compress(g) * a;
-                                b32 = Gamma.Compress(b) * a;
-                                a32 = a;
-                            }
-                            else {
-                                r32 = Gamma.Compress(r);
-                                g32 = Gamma.Compress(g);
-                                b32 = Gamma.Compress(b);
-                                if (destinationAlpha) {
-                                    a32 = a;
-                                }
-                            }
-                        }
-                        else { // sRGB
-                            if (premultiplied) {
-                                r32 = Gamma.Compress_sRGB(r) * a;
-                                g32 = Gamma.Compress_sRGB(g) * a;
-                                b32 = Gamma.Compress_sRGB(b) * a;
-                                a32 = a;
-                            }
-                            else {
-                                r32 = Gamma.Compress_sRGB(r);
-                                g32 = Gamma.Compress_sRGB(g);
-                                b32 = Gamma.Compress_sRGB(b);
-                                if (destinationAlpha) {
-                                    a32 = a;
-                                }
-                            }
-                        }
-
-                        if (bgra) {
-                            writer.Write(b32);
-                            writer.Write(g32);
-                            writer.Write(r32);
+                    else if (gamma == GammaEncoding.Gamma) {
+                        if (premultiplied) {
+                            r32 = Gamma.Compress(r) * a;
+                            g32 = Gamma.Compress(g) * a;
+                            b32 = Gamma.Compress(b) * a;
+                            a32 = a;
                         }
                         else {
-                            writer.Write(r32);
-                            writer.Write(g32);
-                            writer.Write(b32);
-                        }
-                        if (destinationAlpha) {
-                            writer.Write(a32);
+                            r32 = Gamma.Compress(r);
+                            g32 = Gamma.Compress(g);
+                            b32 = Gamma.Compress(b);
+                            if (destinationAlpha) {
+                                a32 = a;
+                            }
                         }
                     }
-                    else { // 16
-                        Half r16, g16, b16, a16 = new Half(1.0f);
-
-                        if (gamma == GammaEncoding.Linear) {
-                            if (premultiplied) {
-                                r16 = (Half)(r * a);
-                                g16 = (Half)(g * a);
-                                b16 = (Half)(b * a);
-                                a16 = (Half)a;
-                            }
-                            else {
-                                r16 = (Half)r;
-                                g16 = (Half)g;
-                                b16 = (Half)b;
-                                if (destinationAlpha) {
-                                    a16 = (Half)a;
-                                }
-                            }
-                        }
-                        else if (gamma == GammaEncoding.Gamma) {
-                            if (premultiplied) {
-                                r16 = (Half)(Gamma.Compress(r) * a);
-                                g16 = (Half)(Gamma.Compress(g) * a);
-                                b16 = (Half)(Gamma.Compress(b) * a);
-                                a16 = (Half)a;
-                            }
-                            else {
-                                r16 = (Half)Gamma.Compress(r);
-                                g16 = (Half)Gamma.Compress(g);
-                                b16 = (Half)Gamma.Compress(b);
-                                if (destinationAlpha) {
-                                    a16 = (Half)a;
-                                }
-                            }
-                        }
-                        else { // sRGB
-                            if (premultiplied) {
-                                r16 = (Half)(Gamma.Compress_sRGB(r) * a);
-                                g16 = (Half)(Gamma.Compress_sRGB(g) * a);
-                                b16 = (Half)(Gamma.Compress_sRGB(b) * a);
-                                a16 = (Half)a;
-                            }
-                            else {
-                                r16 = (Half)Gamma.Compress_sRGB(r);
-                                g16 = (Half)Gamma.Compress_sRGB(g);
-                                b16 = (Half)Gamma.Compress_sRGB(b);
-                                if (destinationAlpha) {
-                                    a16 = (Half)a;
-                                }
-                            }
-                        }
-
-                        if (bgra) {
-                            writer.Write(b16.value);
-                            writer.Write(g16.value);
-                            writer.Write(r16.value);
+                    else { // sRGB
+                        if (premultiplied) {
+                            r32 = Gamma.Compress_sRGB(r) * a;
+                            g32 = Gamma.Compress_sRGB(g) * a;
+                            b32 = Gamma.Compress_sRGB(b) * a;
+                            a32 = a;
                         }
                         else {
-                            writer.Write(r16.value);
-                            writer.Write(g16.value);
-                            writer.Write(b16.value);
+                            r32 = Gamma.Compress_sRGB(r);
+                            g32 = Gamma.Compress_sRGB(g);
+                            b32 = Gamma.Compress_sRGB(b);
+                            if (destinationAlpha) {
+                                a32 = a;
+                            }
                         }
-                        if (destinationAlpha) {
-                            writer.Write(a16.value);
+                    }
+
+                    if (bgra) {
+                        writer.Write(b32);
+                        writer.Write(g32);
+                        writer.Write(r32);
+                    }
+                    else {
+                        writer.Write(r32);
+                        writer.Write(g32);
+                        writer.Write(b32);
+                    }
+                    if (destinationAlpha) {
+                        writer.Write(a32);
+                    }
+                }
+                else { // 16
+                    Half r16, g16, b16, a16 = new Half(1.0f);
+
+                    if (gamma == GammaEncoding.Linear) {
+                        if (premultiplied) {
+                            r16 = (Half)(r * a);
+                            g16 = (Half)(g * a);
+                            b16 = (Half)(b * a);
+                            a16 = (Half)a;
                         }
+                        else {
+                            r16 = (Half)r;
+                            g16 = (Half)g;
+                            b16 = (Half)b;
+                            if (destinationAlpha) {
+                                a16 = (Half)a;
+                            }
+                        }
+                    }
+                    else if (gamma == GammaEncoding.Gamma) {
+                        if (premultiplied) {
+                            r16 = (Half)(Gamma.Compress(r) * a);
+                            g16 = (Half)(Gamma.Compress(g) * a);
+                            b16 = (Half)(Gamma.Compress(b) * a);
+                            a16 = (Half)a;
+                        }
+                        else {
+                            r16 = (Half)Gamma.Compress(r);
+                            g16 = (Half)Gamma.Compress(g);
+                            b16 = (Half)Gamma.Compress(b);
+                            if (destinationAlpha) {
+                                a16 = (Half)a;
+                            }
+                        }
+                    }
+                    else { // sRGB
+                        if (premultiplied) {
+                            r16 = (Half)(Gamma.Compress_sRGB(r) * a);
+                            g16 = (Half)(Gamma.Compress_sRGB(g) * a);
+                            b16 = (Half)(Gamma.Compress_sRGB(b) * a);
+                            a16 = (Half)a;
+                        }
+                        else {
+                            r16 = (Half)Gamma.Compress_sRGB(r);
+                            g16 = (Half)Gamma.Compress_sRGB(g);
+                            b16 = (Half)Gamma.Compress_sRGB(b);
+                            if (destinationAlpha) {
+                                a16 = (Half)a;
+                            }
+                        }
+                    }
+
+                    if (bgra) {
+                        writer.Write(b16.value);
+                        writer.Write(g16.value);
+                        writer.Write(r16.value);
+                    }
+                    else {
+                        writer.Write(r16.value);
+                        writer.Write(g16.value);
+                        writer.Write(b16.value);
+                    }
+                    if (destinationAlpha) {
+                        writer.Write(a16.value);
                     }
                 }
             }
-
-            return buffer;
         }
 
 #if DOTNET
@@ -563,57 +599,89 @@ namespace SharpEXR {
             ReadPixelData(reader);
         }
 
+        private void ReadPixelBlock(IEXRReader reader, uint offset, int linesPerBlock, List<Channel> sortedChannels) {
+            reader.Position = (int)offset;
+
+            if (Version.IsMultiPart) {
+                // we don't use this. should we? i dunno. probably not
+                reader.ReadUInt32(); reader.ReadUInt32();
+            }
+
+            var startY = reader.ReadInt32();
+            var endY = Math.Min(DataWindow.Height, startY + linesPerBlock);
+            var startIndex = startY * DataWindow.Width;
+
+            var dataSize = reader.ReadInt32();
+
+            if (Header.Compression != EXRCompression.None) {
+                throw new NotImplementedException("Compressed images are currently not supported");
+            }
+
+            foreach (var channel in sortedChannels) {
+                float[] floatArr = null;
+                Half[] halfArr = null;
+
+                if (channel.Type == PixelType.Float) {
+                    floatArr = FloatChannels[channel.Name];
+                }
+                else if (channel.Type == PixelType.Half) {
+                    halfArr = HalfChannels[channel.Name];
+                }
+                else {
+                    throw new NotImplementedException();
+                }
+
+                var index = startIndex;
+                for (int y = startY; y < endY; y++) {
+                    for (int x = 0; x < DataWindow.Width; x++, index++) {
+                        if (channel.Type == PixelType.Float) {
+                            floatArr[index] = reader.ReadSingle();
+                        }
+                        else if (channel.Type == PixelType.Half) {
+                            halfArr[index] = reader.ReadHalf();
+                        }
+                        else {
+                            throw new NotImplementedException();
+                        }
+                    }
+                }
+            }
+        }
+
+#if PARALLEL
+        public void OpenParallel(ParallelReaderCreationDelegate createReader) {
+            hasData = true;
+            ReadPixelDataParallel(createReader);
+        }
+
+        private void ReadPixelDataParallel(ParallelReaderCreationDelegate createReader) {
+            var linesPerBlock = EXRFile.GetScanLinesPerBlock(Header.Compression);
+            var sortedChannels = (from c in Header.Channels orderby c.Name select c).ToList();
+
+            var actions = (from offset in Offsets select (Action)(() => {
+                var reader = createReader();
+                ReadPixelBlock(reader, offset, linesPerBlock, sortedChannels);
+                reader.Dispose();
+            }));
+            Parallel.Invoke(actions.ToArray());
+        }
+#else
+        public void OpenParallel(ParallelReaderCreationDelegate createReader) {
+            var reader = createReader();
+            Open(reader);
+            reader.Dispose();
+        }
+#endif
+
         protected void ReadPixelData(IEXRReader reader) {
             var linesPerBlock = EXRFile.GetScanLinesPerBlock(Header.Compression);
             var sortedChannels = (from c in Header.Channels orderby c.Name select c).ToList();
 
+            //var actions = (from offset in Offsets select (Action)(() => {
+            //}));
+            //Parallel.Invoke(actions.ToArray());
             foreach (var offset in Offsets) {
-                reader.Position = (int)offset;
-
-                if (Version.IsMultiPart) {
-                    // we don't use this. should we? i dunno. probably not
-                    reader.ReadUInt32(); reader.ReadUInt32();
-                }
-
-                var startY = reader.ReadInt32();
-                var endY = Math.Min(DataWindow.Height, startY + linesPerBlock);
-                var startIndex = startY * DataWindow.Width;
-
-                var dataSize = reader.ReadInt32();
-
-                if (Header.Compression != EXRCompression.None) {
-                    throw new NotImplementedException("Compressed images are currently not supported");
-                }
-                
-                foreach (var channel in sortedChannels) {
-                    float[] floatArr = null;
-                    Half[] halfArr = null;
-
-                    if (channel.Type == PixelType.Float) {
-                        floatArr = FloatChannels[channel.Name];
-                    }
-                    else if (channel.Type == PixelType.Half) {
-                        halfArr = HalfChannels[channel.Name];
-                    }
-                    else {
-                        throw new NotImplementedException();
-                    }
-
-                    var index = startIndex;
-                    for (int y = startY; y < endY; y++) {
-                        for (int x = 0; x < DataWindow.Width; x++, index++) {
-                            if (channel.Type == PixelType.Float) {
-                                floatArr[index] = reader.ReadSingle();
-                            }
-                            else if (channel.Type == PixelType.Half) {
-                                halfArr[index] = reader.ReadHalf();
-                            }
-                            else {
-                                throw new NotImplementedException();
-                            }
-                        }
-                    }
-                }
+                ReadPixelBlock(reader, offset, linesPerBlock, sortedChannels);
             }
         }
 
