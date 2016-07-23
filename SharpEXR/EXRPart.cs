@@ -192,6 +192,10 @@ namespace SharpEXR {
             return floats;
         }
 
+        public byte[] GetBytes(ImageDestFormat destFormat, GammaEncoding gamma) {
+            return GetBytes(destFormat, gamma, DataWindow.Width * EXRFile.GetBytesPerPixel(destFormat));
+        }
+
         public byte[] GetBytes(ImageDestFormat destFormat, GammaEncoding gamma, int stride) {
             ImageSourceFormat srcFormat;
             if (HalfChannels.ContainsKey("R") && HalfChannels.ContainsKey("G") && HalfChannels.ContainsKey("B")) {
@@ -204,6 +208,10 @@ namespace SharpEXR {
                 throw new EXRFormatException("Unrecognized EXR image format, did not contain half/single RGB color channels");
             }
             return GetBytes(srcFormat, destFormat, gamma, stride);
+        }
+
+        public byte[] GetBytes(ImageSourceFormat srcFormat, ImageDestFormat destFormat, GammaEncoding gamma) {
+            return GetBytes(srcFormat, destFormat, gamma, DataWindow.Width * EXRFile.GetBytesPerPixel(destFormat));
         }
 
         public byte[] GetBytes(ImageSourceFormat srcFormat, ImageDestFormat destFormat, GammaEncoding gamma, int stride) {
