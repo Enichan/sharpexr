@@ -680,6 +680,10 @@ namespace SharpEXR {
             Parallel.Invoke(actions.ToArray());
         }
 #else
+        public void OpenParallel(string file) {
+            Open(file);
+        }
+
         public void OpenParallel(ParallelReaderCreationDelegate createReader) {
             var reader = createReader();
             Open(reader);
