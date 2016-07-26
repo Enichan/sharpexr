@@ -11,9 +11,14 @@ var filePath = "somefile.exr";
 
 // load the EXR file headers and parts, but not actual pixel data
 var exrFile = EXRFile.FromFile(filePath);
+var part = exrFile.Parts[0];
 
 // read pixel data for first part in file
-var part = exrFile.Parts[0].Open(filePath);
+// synchronously, slower
+//part.Open(filePath);
+
+// open part while reading pixel data in parallel
+part.OpenParallel(filePath);
 
 // get pixel data as an array of RGBA unsigned bytes,
 //   auto detecting source format,

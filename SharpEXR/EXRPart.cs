@@ -657,6 +657,12 @@ namespace SharpEXR {
         }
 
 #if PARALLEL
+        public void OpenParallel(string file) {
+            OpenParallel(() => {
+                return new EXRReader(new FileStream(file, FileMode.Open, FileAccess.Read));
+            });
+        }
+
         public void OpenParallel(ParallelReaderCreationDelegate createReader) {
             hasData = true;
             ReadPixelDataParallel(createReader);
