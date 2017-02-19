@@ -386,49 +386,49 @@ namespace SharpEXR {
 
                     if (gamma == GammaEncoding.Linear) {
                         if (premultiplied) {
-                            r8 = (byte)Math.Min(255, Math.Max(0, Math.Round(r * a * 255)));
-                            g8 = (byte)Math.Min(255, Math.Max(0, Math.Round(g * a * 255)));
-                            b8 = (byte)Math.Min(255, Math.Max(0, Math.Round(b * a * 255)));
-                            a8 = (byte)Math.Min(255, Math.Max(0, Math.Round(a * 255)));
+                            r8 = (byte)Math.Min(255, Math.Max(0, Math.Floor(r * a * 255 + 0.5)));
+                            g8 = (byte)Math.Min(255, Math.Max(0, Math.Floor(g * a * 255 + 0.5)));
+                            b8 = (byte)Math.Min(255, Math.Max(0, Math.Floor(b * a * 255 + 0.5)));
+                            a8 = (byte)Math.Min(255, Math.Max(0, Math.Floor(a * 255 + 0.5)));
                         }
                         else {
-                            r8 = (byte)Math.Min(255, Math.Max(0, Math.Round(r * 255)));
-                            g8 = (byte)Math.Min(255, Math.Max(0, Math.Round(g * 255)));
-                            b8 = (byte)Math.Min(255, Math.Max(0, Math.Round(b * 255)));
+                            r8 = (byte)Math.Min(255, Math.Max(0, Math.Floor(r * 255 + 0.5)));
+                            g8 = (byte)Math.Min(255, Math.Max(0, Math.Floor(g * 255 + 0.5)));
+                            b8 = (byte)Math.Min(255, Math.Max(0, Math.Floor(b * 255 + 0.5)));
                             if (destinationAlpha) {
-                                a8 = (byte)Math.Min(255, Math.Max(0, Math.Round(a * 255)));
+                                a8 = (byte)Math.Min(255, Math.Max(0, Math.Floor(a * 255 + 0.5)));
                             }
                         }
                     }
                     else if (gamma == GammaEncoding.Gamma) {
                         if (premultiplied) {
-                            r8 = (byte)Math.Min(255, Math.Max(0, Math.Round(Gamma.Compress(r) * a * 255)));
-                            g8 = (byte)Math.Min(255, Math.Max(0, Math.Round(Gamma.Compress(g) * a * 255)));
-                            b8 = (byte)Math.Min(255, Math.Max(0, Math.Round(Gamma.Compress(b) * a * 255)));
-                            a8 = (byte)Math.Min(255, Math.Max(0, Math.Round(a * 255)));
+                            r8 = (byte)Math.Min(255, Math.Max(0, Math.Floor(Gamma.Compress(r) * a * 255 + 0.5)));
+                            g8 = (byte)Math.Min(255, Math.Max(0, Math.Floor(Gamma.Compress(g) * a * 255 + 0.5)));
+                            b8 = (byte)Math.Min(255, Math.Max(0, Math.Floor(Gamma.Compress(b) * a * 255 + 0.5)));
+                            a8 = (byte)Math.Min(255, Math.Max(0, Math.Floor(a * 255 + 0.5)));
                         }
                         else {
-                            r8 = (byte)Math.Min(255, Math.Max(0, Math.Round(Gamma.Compress(r) * 255)));
-                            g8 = (byte)Math.Min(255, Math.Max(0, Math.Round(Gamma.Compress(g) * 255)));
-                            b8 = (byte)Math.Min(255, Math.Max(0, Math.Round(Gamma.Compress(b) * 255)));
+                            r8 = (byte)Math.Min(255, Math.Max(0, Math.Floor(Gamma.Compress(r) * 255 + 0.5)));
+                            g8 = (byte)Math.Min(255, Math.Max(0, Math.Floor(Gamma.Compress(g) * 255 + 0.5)));
+                            b8 = (byte)Math.Min(255, Math.Max(0, Math.Floor(Gamma.Compress(b) * 255 + 0.5)));
                             if (destinationAlpha) {
-                                a8 = (byte)Math.Min(255, Math.Max(0, Math.Round(a * 255)));
+                                a8 = (byte)Math.Min(255, Math.Max(0, Math.Floor(a * 255 + 0.5)));
                             }
                         }
                     }
                     else { // sRGB
                         if (premultiplied) {
-                            r8 = (byte)Math.Min(255, Math.Max(0, Math.Round(Gamma.Compress_sRGB(r) * a * 255)));
-                            g8 = (byte)Math.Min(255, Math.Max(0, Math.Round(Gamma.Compress_sRGB(g) * a * 255)));
-                            b8 = (byte)Math.Min(255, Math.Max(0, Math.Round(Gamma.Compress_sRGB(b) * a * 255)));
-                            a8 = (byte)Math.Min(255, Math.Max(0, Math.Round(a * 255)));
+                            r8 = (byte)Math.Min(255, Math.Max(0, Math.Floor(Gamma.Compress_sRGB(r) * a * 255 + 0.5)));
+                            g8 = (byte)Math.Min(255, Math.Max(0, Math.Floor(Gamma.Compress_sRGB(g) * a * 255 + 0.5)));
+                            b8 = (byte)Math.Min(255, Math.Max(0, Math.Floor(Gamma.Compress_sRGB(b) * a * 255 + 0.5)));
+                            a8 = (byte)Math.Min(255, Math.Max(0, Math.Floor(a * 255 + 0.5)));
                         }
                         else {
-                            r8 = (byte)Math.Min(255, Math.Max(0, Math.Round(Gamma.Compress_sRGB(r) * 255)));
-                            g8 = (byte)Math.Min(255, Math.Max(0, Math.Round(Gamma.Compress_sRGB(g) * 255)));
-                            b8 = (byte)Math.Min(255, Math.Max(0, Math.Round(Gamma.Compress_sRGB(b) * 255)));
+                            r8 = (byte)Math.Min(255, Math.Max(0, Math.Floor(Gamma.Compress_sRGB(r) * 255 + 0.5)));
+                            g8 = (byte)Math.Min(255, Math.Max(0, Math.Floor(Gamma.Compress_sRGB(g) * 255 + 0.5)));
+                            b8 = (byte)Math.Min(255, Math.Max(0, Math.Floor(Gamma.Compress_sRGB(b) * 255 + 0.5)));
                             if (destinationAlpha) {
-                                a8 = (byte)Math.Min(255, Math.Max(0, Math.Round(a * 255)));
+                                a8 = (byte)Math.Min(255, Math.Max(0, Math.Floor(a * 255 + 0.5)));
                             }
                         }
                     }
