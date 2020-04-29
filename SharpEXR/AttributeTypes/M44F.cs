@@ -1,15 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace SharpEXR.AttributeTypes {
-    public struct M44F {
+﻿namespace SharpEXR.AttributeTypes
+{
+    public readonly struct M44F
+    {
         public readonly float[] Values;
 
         public M44F(float v0, float v1, float v2, float v3, float v4, float v5, float v6, float v7,
-            float v8, float v9, float v10, float v11, float v12, float v13, float v14, float v15) {
+            float v8, float v9, float v10, float v11, float v12, float v13, float v14, float v15)
+        {
             Values = new float[9];
             Values[0] = v0;
             Values[1] = v1;

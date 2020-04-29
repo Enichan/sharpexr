@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Globalization;
-using System.Runtime.InteropServices;
 
-namespace SharpEXR {
+namespace SharpEXR
+{
     /// <summary>
     /// Represents a half-precision floating point number. 
     /// </summary>
@@ -23,7 +23,8 @@ namespace SharpEXR {
     ///     - IEEE 754 revision, link: http://grouper.ieee.org/groups/754/
     /// </remarks>
     [Serializable]
-    public struct Half : IComparable, IFormattable, IConvertible, IComparable<Half>, IEquatable<Half> {
+    public struct Half : IComparable, IFormattable, IConvertible, IComparable<Half>, IEquatable<Half>
+    {
         /// <summary>
         /// Internal representation of the half-precision floating-point number.
         /// </summary>
@@ -385,19 +386,25 @@ namespace SharpEXR {
         /// Return Value Meaning Less than zero This instance is less than value. Zero
         /// This instance is equal to value. Greater than zero This instance is greater than value.
         /// </returns>
-        public int CompareTo(Half other) {
+        public int CompareTo(Half other)
+        {
             int result = 0;
-            if (this < other) {
+            if (this < other)
+            {
                 result = -1;
             }
-            else if (this > other) {
+            else if (this > other)
+            {
                 result = 1;
             }
-            else if (this != other) {
-                if (!IsNaN(this)) {
+            else if (this != other)
+            {
+                if (!IsNaN(this))
+                {
                     result = 1;
                 }
-                else if (!IsNaN(other)) {
+                else if (!IsNaN(other))
+                {
                     result = -1;
                 }
             }
@@ -414,17 +421,22 @@ namespace SharpEXR {
         /// This instance is equal to value. Greater than zero This instance is greater
         /// than value. -or- value is null.
         /// </returns>
-        /// <exception cref="System.ArgumentException">value is not a System.Half</exception>
-        public int CompareTo(object obj) {
+        /// <exception cref="ArgumentException">value is not a System.Half</exception>
+        public int CompareTo(object obj)
+        {
             int result = 0;
-            if (obj == null) {
+            if (obj == null)
+            {
                 result = 1;
             }
-            else {
-                if (obj is Half) {
+            else
+            {
+                if (obj is Half)
+                {
                     result = CompareTo((Half)obj);
                 }
-                else {
+                else
+                {
                     throw new ArgumentException("Object must be of type Half.");
                 }
             }
@@ -436,7 +448,8 @@ namespace SharpEXR {
         /// </summary>
         /// <param name="other">A System.Half object to compare to this instance.</param>
         /// <returns>true if value is equal to this instance; otherwise, false.</returns>
-        public bool Equals(Half other) {
+        public bool Equals(Half other)
+        {
             return ((other == this) || (IsNaN(other) && IsNaN(this)));
         }
         /// <summary>
@@ -445,29 +458,23 @@ namespace SharpEXR {
         /// </summary>
         /// <param name="obj">An System.Object.</param>
         /// <returns>true if value is a System.Half and equal to this instance; otherwise, false.</returns>
-        public override bool Equals(object obj) {
-            bool result = false;
-            if (obj is Half) {
-                Half half = (Half)obj;
-                if ((half == this) || (IsNaN(half) && IsNaN(this))) {
-                    result = true;
-                }
-            }
-
-            return result;
+        public override bool Equals(object obj)
+        {
+            return obj is Half other && other.Equals(this);
         }
+
         /// <summary>
         /// Returns the hash code for this instance.
         /// </summary>
         /// <returns>A 32-bit signed integer hash code.</returns>
-        public override int GetHashCode() {
-            return value.GetHashCode();
-        }
+        public override int GetHashCode() => value.GetHashCode();
+
         /// <summary>
         /// Returns the System.TypeCode for value type System.Half.
         /// </summary>
         /// <returns>The enumerated constant (TypeCode)255.</returns>
-        public TypeCode GetTypeCode() {
+        public TypeCode GetTypeCode()
+        {
             return (TypeCode)255;
         }
 
@@ -477,7 +484,8 @@ namespace SharpEXR {
         /// </summary>
         /// <param name="value">The number to convert.</param>
         /// <returns>An array of bytes with length 2.</returns>
-        public static byte[] GetBytes(Half value) {
+        public static byte[] GetBytes(Half value)
+        {
             return BitConverter.GetBytes(value.value);
         }
         /// <summary>
@@ -485,7 +493,8 @@ namespace SharpEXR {
         /// </summary>
         /// <param name="value">A System.Half value.</param>
         /// <returns>A 16-bit unsigned integer that contain the binary representation of value.</returns>        
-        public static ushort GetBits(Half value) {
+        public static ushort GetBits(Half value)
+        {
             return value.value;
         }
         /// <summary>
@@ -501,7 +510,8 @@ namespace SharpEXR {
         /// </exception>
         /// <exception cref="System.ArgumentNullException">value is null.</exception>
         /// <exception cref="System.ArgumentOutOfRangeException">startIndex is less than zero or greater than the length of value minus 1.</exception>
-        public static Half ToHalf(byte[] value, int startIndex) {
+        public static Half ToHalf(byte[] value, int startIndex)
+        {
             return Half.ToHalf((ushort)BitConverter.ToInt16(value, startIndex));
         }
         /// <summary>
@@ -509,7 +519,8 @@ namespace SharpEXR {
         /// </summary>
         /// <param name="bits">Binary representation of System.Half value</param>
         /// <returns>A half-precision floating point number formed by its binary representation.</returns>
-        public static Half ToHalf(ushort bits) {
+        public static Half ToHalf(ushort bits)
+        {
             return new Half { value = bits };
         }
 
@@ -522,15 +533,20 @@ namespace SharpEXR {
         /// than zero. 0 value is equal to zero. 1 value is greater than zero.
         /// </returns>
         /// <exception cref="System.ArithmeticException">value is equal to System.Half.NaN.</exception>
-        public static int Sign(Half value) {
-            if (value < 0) {
+        public static int Sign(Half value)
+        {
+            if (value < 0)
+            {
                 return -1;
             }
-            else if (value > 0) {
+            else if (value > 0)
+            {
                 return 1;
             }
-            else {
-                if (value != 0) {
+            else
+            {
+                if (value != 0)
+                {
                     throw new ArithmeticException("Function does not accept floating point Not-a-Number values.");
                 }
             }
@@ -542,7 +558,8 @@ namespace SharpEXR {
         /// </summary>
         /// <param name="value">A number in the range System.Half.MinValue â‰¤ value â‰¤ System.Half.MaxValue.</param>
         /// <returns>A half-precision floating-point number, x, such that 0 â‰¤ x â‰¤System.Half.MaxValue.</returns>
-        public static Half Abs(Half value) {
+        public static Half Abs(Half value)
+        {
             return HalfHelper.Abs(value);
         }
         /// <summary>
@@ -554,7 +571,8 @@ namespace SharpEXR {
         /// Parameter value1 or value2, whichever is larger. If value1, or value2, or both val1
         /// and value2 are equal to System.Half.NaN, System.Half.NaN is returned.
         /// </returns>
-        public static Half Max(Half value1, Half value2) {
+        public static Half Max(Half value1, Half value2)
+        {
             return (value1 < value2) ? value2 : value1;
         }
         /// <summary>
@@ -566,7 +584,8 @@ namespace SharpEXR {
         /// Parameter value1 or value2, whichever is smaller. If value1, or value2, or both val1
         /// and value2 are equal to System.Half.NaN, System.Half.NaN is returned.
         /// </returns>
-        public static Half Min(Half value1, Half value2) {
+        public static Half Min(Half value1, Half value2)
+        {
             return (value1 < value2) ? value1 : value2;
         }
         #endregion
@@ -576,7 +595,8 @@ namespace SharpEXR {
         /// </summary>
         /// <param name="half">A half-precision floating-point number.</param>
         /// <returns>true if value evaluates to not a number (System.Half.NaN); otherwise, false.</returns>
-        public static bool IsNaN(Half half) {
+        public static bool IsNaN(Half half)
+        {
             return HalfHelper.IsNaN(half);
         }
         /// <summary>
@@ -584,7 +604,8 @@ namespace SharpEXR {
         /// </summary>
         /// <param name="half">A half-precision floating-point number.</param>
         /// <returns>true if half evaluates to System.Half.PositiveInfinity or System.Half.NegativeInfinity; otherwise, false.</returns>
-        public static bool IsInfinity(Half half) {
+        public static bool IsInfinity(Half half)
+        {
             return HalfHelper.IsInfinity(half);
         }
         /// <summary>
@@ -592,7 +613,8 @@ namespace SharpEXR {
         /// </summary>
         /// <param name="half">A half-precision floating-point number.</param>
         /// <returns>true if half evaluates to System.Half.NegativeInfinity; otherwise, false.</returns>
-        public static bool IsNegativeInfinity(Half half) {
+        public static bool IsNegativeInfinity(Half half)
+        {
             return HalfHelper.IsNegativeInfinity(half);
         }
         /// <summary>
@@ -600,7 +622,8 @@ namespace SharpEXR {
         /// </summary>
         /// <param name="half">A half-precision floating-point number.</param>
         /// <returns>true if half evaluates to System.Half.PositiveInfinity; otherwise, false.</returns>
-        public static bool IsPositiveInfinity(Half half) {
+        public static bool IsPositiveInfinity(Half half)
+        {
             return HalfHelper.IsPositiveInfinity(half);
         }
 
@@ -613,7 +636,8 @@ namespace SharpEXR {
         /// <exception cref="System.ArgumentNullException">value is null.</exception>
         /// <exception cref="System.FormatException">value is not in the correct format.</exception>
         /// <exception cref="System.OverflowException">value represents a number less than System.Half.MinValue or greater than System.Half.MaxValue.</exception>
-        public static Half Parse(string value) {
+        public static Half Parse(string value)
+        {
             return (Half)float.Parse(value, CultureInfo.InvariantCulture);
         }
         /// <summary>
@@ -626,7 +650,8 @@ namespace SharpEXR {
         /// <exception cref="System.ArgumentNullException">value is null.</exception>
         /// <exception cref="System.FormatException">value is not in the correct format.</exception>
         /// <exception cref="System.OverflowException">value represents a number less than System.Half.MinValue or greater than System.Half.MaxValue.</exception>
-        public static Half Parse(string value, IFormatProvider provider) {
+        public static Half Parse(string value, IFormatProvider provider)
+        {
             return (Half)float.Parse(value, provider);
         }
         /// <summary>
@@ -646,7 +671,8 @@ namespace SharpEXR {
         /// </exception>
         /// <exception cref="System.FormatException">value is not in the correct format.</exception>
         /// <exception cref="System.OverflowException">value represents a number less than System.Half.MinValue or greater than System.Half.MaxValue.</exception>
-        public static Half Parse(string value, NumberStyles style) {
+        public static Half Parse(string value, NumberStyles style)
+        {
             return (Half)float.Parse(value, style, CultureInfo.InvariantCulture);
         }
         /// <summary>
@@ -668,9 +694,11 @@ namespace SharpEXR {
         /// </exception>
         /// <exception cref="System.FormatException">value is not in the correct format.</exception>
         /// <exception cref="System.OverflowException">value represents a number less than System.Half.MinValue or greater than System.Half.MaxValue.</exception>
-        public static Half Parse(string value, NumberStyles style, IFormatProvider provider) {
+        public static Half Parse(string value, NumberStyles style, IFormatProvider provider)
+        {
             return (Half)float.Parse(value, style, provider);
         }
+
         /// <summary>
         /// Converts the string representation of a number to its System.Half equivalent.
         /// A return value indicates whether the conversion succeeded or failed.
@@ -684,9 +712,10 @@ namespace SharpEXR {
         /// or greater than System.Half.MaxValue. This parameter is passed uninitialized.
         /// </param>
         /// <returns>true if s was converted successfully; otherwise, false.</returns>
-        public static bool TryParse(string value, out Half result) {
-            float f;
-            if (float.TryParse(value, out f)) {
+        public static bool TryParse(string value, out Half result)
+        {
+            if (float.TryParse(value, out float f))
+            {
                 result = (Half)f;
                 return true;
             }
@@ -694,6 +723,7 @@ namespace SharpEXR {
             result = new Half();
             return false;
         }
+
         /// <summary>
         /// Converts the string representation of a number to its System.Half equivalent
         /// using the specified style and culture-specific format. A return value indicates
@@ -717,14 +747,17 @@ namespace SharpEXR {
         /// style is not a System.Globalization.NumberStyles value. -or- style 
         /// is the System.Globalization.NumberStyles.AllowHexSpecifier value.
         /// </exception>
-        public static bool TryParse(string value, NumberStyles style, IFormatProvider provider, out Half result) {
+        public static bool TryParse(string value, NumberStyles style, IFormatProvider provider, out Half result)
+        {
             bool parseResult = false;
-            float f;
-            if (float.TryParse(value, style, provider, out f)) {
+
+            if (float.TryParse(value, style, provider, out float f))
+            {
                 result = (Half)f;
                 parseResult = true;
             }
-            else {
+            else
+            {
                 result = new Half();
             }
 
@@ -734,7 +767,8 @@ namespace SharpEXR {
         /// Converts the numeric value of this instance to its equivalent string representation.
         /// </summary>
         /// <returns>A string that represents the value of this instance.</returns>
-        public override string ToString() {
+        public override string ToString()
+        {
             return ((float)this).ToString(CultureInfo.InvariantCulture);
         }
         /// <summary>
@@ -743,7 +777,8 @@ namespace SharpEXR {
         /// </summary>
         /// <param name="formatProvider">An System.IFormatProvider that supplies culture-specific formatting information.</param>
         /// <returns>The string representation of the value of this instance as specified by provider.</returns>
-        public string ToString(IFormatProvider formatProvider) {
+        public string ToString(IFormatProvider formatProvider)
+        {
             return ((float)this).ToString(formatProvider);
         }
         /// <summary>
@@ -751,7 +786,8 @@ namespace SharpEXR {
         /// </summary>
         /// <param name="format">A numeric format string.</param>
         /// <returns>The string representation of the value of this instance as specified by format.</returns>
-        public string ToString(string format) {
+        public string ToString(string format)
+        {
             return ((float)this).ToString(format, CultureInfo.InvariantCulture);
         }
         /// <summary>
@@ -762,61 +798,79 @@ namespace SharpEXR {
         /// <param name="formatProvider">An System.IFormatProvider that supplies culture-specific formatting information.</param>
         /// <returns>The string representation of the value of this instance as specified by format and provider.</returns>
         /// <exception cref="System.FormatException">format is invalid.</exception>
-        public string ToString(string format, IFormatProvider formatProvider) {
+        public string ToString(string format, IFormatProvider formatProvider)
+        {
             return ((float)this).ToString(format, formatProvider);
         }
         #endregion
 
         #region IConvertible Members
-        float IConvertible.ToSingle(IFormatProvider provider) {
+        float IConvertible.ToSingle(IFormatProvider provider)
+        {
             return (float)this;
         }
-        TypeCode IConvertible.GetTypeCode() {
+        TypeCode IConvertible.GetTypeCode()
+        {
             return GetTypeCode();
         }
-        bool IConvertible.ToBoolean(IFormatProvider provider) {
+        bool IConvertible.ToBoolean(IFormatProvider provider)
+        {
             return Convert.ToBoolean((float)this);
         }
-        byte IConvertible.ToByte(IFormatProvider provider) {
+        byte IConvertible.ToByte(IFormatProvider provider)
+        {
             return Convert.ToByte((float)this);
         }
-        char IConvertible.ToChar(IFormatProvider provider) {
+        char IConvertible.ToChar(IFormatProvider provider)
+        {
             throw new InvalidCastException(string.Format(CultureInfo.CurrentCulture, "Invalid cast from '{0}' to '{1}'.", "Half", "Char"));
         }
-        DateTime IConvertible.ToDateTime(IFormatProvider provider) {
+        DateTime IConvertible.ToDateTime(IFormatProvider provider)
+        {
             throw new InvalidCastException(string.Format(CultureInfo.CurrentCulture, "Invalid cast from '{0}' to '{1}'.", "Half", "DateTime"));
         }
-        decimal IConvertible.ToDecimal(IFormatProvider provider) {
+        decimal IConvertible.ToDecimal(IFormatProvider provider)
+        {
             return Convert.ToDecimal((float)this);
         }
-        double IConvertible.ToDouble(IFormatProvider provider) {
+        double IConvertible.ToDouble(IFormatProvider provider)
+        {
             return Convert.ToDouble((float)this);
         }
-        short IConvertible.ToInt16(IFormatProvider provider) {
+        short IConvertible.ToInt16(IFormatProvider provider)
+        {
             return Convert.ToInt16((float)this);
         }
-        int IConvertible.ToInt32(IFormatProvider provider) {
+        int IConvertible.ToInt32(IFormatProvider provider)
+        {
             return Convert.ToInt32((float)this);
         }
-        long IConvertible.ToInt64(IFormatProvider provider) {
+        long IConvertible.ToInt64(IFormatProvider provider)
+        {
             return Convert.ToInt64((float)this);
         }
-        sbyte IConvertible.ToSByte(IFormatProvider provider) {
+        sbyte IConvertible.ToSByte(IFormatProvider provider)
+        {
             return Convert.ToSByte((float)this);
         }
-        string IConvertible.ToString(IFormatProvider provider) {
+        string IConvertible.ToString(IFormatProvider provider)
+        {
             return Convert.ToString((float)this, CultureInfo.InvariantCulture);
         }
-        object IConvertible.ToType(Type conversionType, IFormatProvider provider) {
+        object IConvertible.ToType(Type conversionType, IFormatProvider provider)
+        {
             return (((float)this) as IConvertible).ToType(conversionType, provider);
         }
-        ushort IConvertible.ToUInt16(IFormatProvider provider) {
+        ushort IConvertible.ToUInt16(IFormatProvider provider)
+        {
             return Convert.ToUInt16((float)this);
         }
-        uint IConvertible.ToUInt32(IFormatProvider provider) {
+        uint IConvertible.ToUInt32(IFormatProvider provider)
+        {
             return Convert.ToUInt32((float)this);
         }
-        ulong IConvertible.ToUInt64(IFormatProvider provider) {
+        ulong IConvertible.ToUInt64(IFormatProvider provider)
+        {
             return Convert.ToUInt64((float)this);
         }
         #endregion

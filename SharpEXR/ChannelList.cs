@@ -1,42 +1,47 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 
-namespace SharpEXR {
-    public class ChannelList : IEnumerable<Channel> {
+namespace SharpEXR
+{
+    public sealed class ChannelList : IEnumerable<Channel>
+    {
         public List<Channel> Channels { get; set; }
 
-        public ChannelList() {
+        public ChannelList()
+        {
             Channels = new List<Channel>();
         }
 
-        public void Read(EXRFile file, IEXRReader reader, int size) {
+        public void Read(EXRFile file, IEXRReader reader, int size)
+        {
             var totalSize = 0;
             Channel channel;
             int bytesRead;
 
-            while (ReadChannel(file, reader, out channel, out bytesRead)) {
+            while (ReadChannel(file, reader, out channel, out bytesRead))
+            {
                 Channels.Add(channel);
                 totalSize += bytesRead;
 
-                if (totalSize > size) {
+                if (totalSize > size)
+                {
                     throw new EXRFormatException("Read " + totalSize + " bytes but Size was " + size + ".");
                 }
             }
             totalSize += bytesRead;
 
-            if (totalSize != size) {
+            if (totalSize != size)
+            {
                 throw new EXRFormatException("Read " + totalSize + " bytes but Size was " + size + ".");
             }
         }
 
-        private bool ReadChannel(EXRFile file, IEXRReader reader, out Channel channel, out int bytesRead) {
+        private bool ReadChannel(EXRFile file, IEXRReader reader, out Channel channel, out int bytesRead)
+        {
             var start = reader.Position;
 
             var name = reader.ReadNullTerminatedString(255);
-            if (name == "") {
+            if (name == "")
+            {
                 channel = null;
                 bytesRead = reader.Position - start;
                 return false;
@@ -53,11 +58,13 @@ namespace SharpEXR {
             return true;
         }
 
-        public IEnumerator<Channel> GetEnumerator() {
+        public IEnumerator<Channel> GetEnumerator()
+        {
             return Channels.GetEnumerator();
         }
 
-        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() {
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+        {
             return GetEnumerator();
         }
 

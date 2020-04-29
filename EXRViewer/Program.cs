@@ -28,11 +28,14 @@ namespace EXRViewer {
 
             part.Close();
 
-            var frm = new Form();
-            frm.BackgroundImage = bmp;
-            frm.FormBorderStyle = FormBorderStyle.FixedDialog;
-            frm.MaximizeBox = false;
-            frm.ClientSize = new System.Drawing.Size(bmp.Width, bmp.Height);
+            var frm = new Form
+            {
+                BackgroundImage = bmp,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                MaximizeBox = false,
+                ClientSize = new System.Drawing.Size(bmp.Width, bmp.Height)
+            };
+
             frm.ShowDialog();
         }
     }
